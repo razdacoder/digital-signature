@@ -1,47 +1,38 @@
-#!/usr/bin/env python
-"""Extract the public key from the private key and write to a file.
-"""
 import streamlit as st
-from Crypto.Hash import SHA256
-from Crypto.Signature import PKCS1_v1_5
-from Crypto.PublicKey import RSA
-import sys
+import hashlib
+import hmac
+import base64
 
 
 
 st.title("Digital Signature and Verifier")
 
 
-#message = "I want this stream signed"
 message = st.text_area("Enter message to sign:")
-digest = SHA256.new()
-digest.update(message.encode('utf-8'))
+digest = hashlib.sha256(message.encode()).digest()
 
 # Load private key previouly generated
-private_key = None
-with open ("private_key.pem", "r") as myfile:
-    private_key = RSA.importKey(myfile.read())
+private_key = '*pi4xk8m2+xe^0t6ogmga2e^e))z2t6%wj)ogp@hf0o_+-)ibq'
+
 
 # Sign the message
-signer = PKCS1_v1_5.new(private_key)
-sig = signer.sign(digest)
-
-# sig is bytes object, so convert to hex string.
-# (could convert using b64encode or any number of ways)
-st.write("Signature: => ", sig.hex())
+if st.button("Sign Message"):
+    signature = hmac.new(private_key.encode(), digest, hashlib.sha256).hexdigest()
+    encoded_signature = base64.b64encode(signature.encode()).decode()
+    st.write("Signature: => ", encoded_signature)
 
 
-message_to_verify = st.text_area("Enter message to verify:")
-digest = SHA256.new()
-digest.update(message_to_verify.encode('utf-8'))
 
-sig = st.text_area('Signature to verify:')
-sig = bytes.fromhex(sig)
-
-public_key = PKCS1_v1_5.new(private_key.publickey())
-verified = public_key.verify(digest, sig)
-
-if verified:
-    st.success('Successfully verified message')
-else:
-    st.error('FAILED')
+message_to_verify = st.text_area("Enter message to verify: ")
+signature = st.text_area('Signature to verify: ')
+if st.button("Verify Signature"):
+    try:
+        signature = base64.b64decode(signature.encode()).decode()
+        digest = hashlib.sha256(message_to_verify.encode('utf-8')).digest()
+        verified = hmac.new(private_key.encode(), digest, hashlib.sha256).hexdigest() == signature
+        if verified:
+            st.success("Successfully verified message")
+        else:
+            st.error("Failed to verify message: This message may have been tempared with.")
+    except:
+        st.error("Failed to verify message: This message may have been tempared with.")
